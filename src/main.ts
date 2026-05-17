@@ -7,8 +7,8 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'https://admin.shadowsilhouette.com',
-      'https://shadowsilhouette.com',
+      'https://admin.alifadil.com',
+      'https://alifadil.com',
       // 'http://localhost:3002',
       // 'http://localhost:3001',
     ],
