@@ -1,4 +1,5 @@
- import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
+
+import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
  import { ShowsService } from './shows.service';
  import { Show } from './show.entity';
  import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -34,6 +35,7 @@ import * as fs from 'fs';
    @UseInterceptors(FileFieldsInterceptor([
      { name: 'coverImage', maxCount: 1 },
      { name: 'thumbnailImage', maxCount: 1 },
+     { name: 'stills', maxCount: 30 },
    ], {
      storage: diskStorage({
        destination: join(process.cwd(), 'uploads'),
@@ -45,14 +47,32 @@ import * as fs from 'fs';
    }))
    async create(
      @Body() showData: any,
-     @UploadedFiles() files: { coverImage?: Express.Multer.File[], thumbnailImage?: Express.Multer.File[] }
+     @UploadedFiles() files: { coverImage?: Express.Multer.File[], thumbnailImage?: Express.Multer.File[], stills?: Express.Multer.File[] }
    ) {
-     const show: Partial<Show> = { ...showData };
+     const show = this.normalizeShowData(showData);
      if (files.coverImage?.[0]) show.coverImage = files.coverImage[0].filename;
      if (files.thumbnailImage?.[0]) show.thumbnailImage = files.thumbnailImage[0].filename;
+     if (files.stills?.length) show.stills = files.stills.map((file) => file.filename);
      
      await this.processImages(show);
      return this.showsService.create(show);
+   }
+
+   private normalizeShowData(showData: any): Partial<Show> {
+     const show: Partial<Show> = { ...showData };
+
+     if (typeof showData.sortOrder === 'string') {
+       show.sortOrder = Number(showData.sortOrder) || 0;
+     }
+
+     if (typeof showData.stills === 'string') {
+       show.stills = showData.stills
+         .split(',')
+         .map((still: string) => still.trim())
+         .filter(Boolean);
+     }
+
+     return show;
    }
 
    private async processImages(show: Partial<Show>) {
@@ -107,6 +127,41 @@ import * as fs from 'fs';
          console.error('Image processing failed for thumbnail', err);
        }
      }
+
+     if (show.stills?.length) {
+       const optimizedStills: string[] = [];
+
+       for (const filename of show.stills) {
+         if (
+           !filename ||
+           filename.startsWith('opt-') ||
+           filename.startsWith('http://') ||
+           filename.startsWith('https://')
+         ) {
+           optimizedStills.push(filename);
+           continue;
+         }
+
+         const inputPath = join(uploadsDir, filename);
+         const optimizedStillName = `opt-${filename}`;
+         const optimizedStillPath = join(uploadsDir, optimizedStillName);
+
+         try {
+           await sharp(inputPath)
+             .resize(1600, null, { withoutEnlargement: true })
+             .toFormat('jpeg', { quality: 85 })
+             .toFile(optimizedStillPath);
+
+           if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+           optimizedStills.push(optimizedStillName);
+         } catch (err) {
+           console.error('Image processing failed for still image', err);
+           optimizedStills.push(filename);
+         }
+       }
+
+       show.stills = optimizedStills;
+     }
    }
 
    @Put(':id')
@@ -115,6 +170,7 @@ import * as fs from 'fs';
    @UseInterceptors(FileFieldsInterceptor([
      { name: 'coverImage', maxCount: 1 },
      { name: 'thumbnailImage', maxCount: 1 },
+     { name: 'stills', maxCount: 30 },
    ], {
      storage: diskStorage({
        destination: join(process.cwd(), 'uploads'),
@@ -127,16 +183,25 @@ import * as fs from 'fs';
      async update(
       @Param('id') id: string,
       @Body() showData: any,
-      @UploadedFiles() files: { coverImage?: Express.Multer.File[], thumbnailImage?: Express.Multer.File[] }
+      @UploadedFiles() files: { coverImage?: Express.Multer.File[], thumbnailImage?: Express.Multer.File[], stills?: Express.Multer.File[] }
     ) {
       // Find existing show to handle old files
       const existingShow = await this.showsService.findOne(+id);
       
-      const show: Partial<Show> = { ...showData };
+      const show = this.normalizeShowData(showData);
       
-      if (files.coverImage?.[0]) {
+      const shouldRemoveCover =
+        showData.removeCoverImage === 'true' ||
+        showData.removeCoverImage === true ||
+        showData.coverImage === '' ||
+        showData.coverImage === 'null';
+
+      if (shouldRemoveCover && existingShow) {
+        this.deleteFiles([existingShow.coverImage, existingShow.seoImage]);
+        show.coverImage = null;
+        show.seoImage = null;
+      } else if (files.coverImage?.[0]) {
         show.coverImage = files.coverImage[0].filename;
-        // Delete old cover and seo images if they exist
         if (existingShow) {
           this.deleteFiles([existingShow.coverImage, existingShow.seoImage]);
         }
@@ -150,6 +215,14 @@ import * as fs from 'fs';
         }
       }
 
+      if (files.stills?.length) {
+        show.stills = files.stills.map((file) => file.filename);
+
+        if (existingShow) {
+          this.deleteFiles(existingShow.stills || []);
+        }
+      }
+
       await this.processImages(show);
       return this.showsService.update(+id, show);
     }
@@ -160,12 +233,12 @@ import * as fs from 'fs';
    async remove(@Param('id') id: string) {
      const show = await this.showsService.findOne(+id);
      if (show) {
-       this.deleteFiles([show.coverImage, show.thumbnailImage, show.seoImage]);
+       this.deleteFiles([show.coverImage, show.thumbnailImage, show.seoImage, ...(show.stills || [])]);
      }
      return this.showsService.remove(+id);
    }
 
-   private deleteFiles(filenames: (string | undefined)[]) {
+   private deleteFiles(filenames: (string | null | undefined)[]) {
      const uploadsDir = join(process.cwd(), 'uploads');
      filenames.forEach(filename => {
        if (filename) {

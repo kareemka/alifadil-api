@@ -5,27 +5,50 @@ export class Show {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
-  title: string;
+  @Column({ type: 'varchar', nullable: true })
+  title: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  coverImage: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  thumbnailImage: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  youtubeTrailerLink: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  seoImage: string | null;
+
+  @Column({ type: 'varchar', default: '2026' })
+  releaseYear: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  meta: string | null;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  synopsis: string | null;
 
-  @Column({ nullable: true })
-  coverImage: string; // Landscape for background
+  @Column({ type: 'varchar', nullable: true })
+  director: string | null;
 
-  @Column({ nullable: true })
-  thumbnailImage: string; // Portrait for cards
+  @Column({ type: 'varchar', nullable: true })
+  writer: string | null;
 
-  @Column({ nullable: true })
-  youtubeTrailerLink: string;
+  @Column({ type: 'varchar', nullable: true })
+  dop: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  music: string | null;
 
-  @Column({ nullable: true })
-  seoImage: string; // Optimized image for SEO/Social sharing
+  @Column({ type: 'varchar', nullable: true })
+  editor: string | null;
 
-  @Column({ default: '2026' })
-  releaseYear: string;
+  @Column({ type: 'text', nullable: true })
+  cast: string | null;
+
+  @Column({ type: 'simple-array', nullable: true })
+  stills: string[] | null;
 
   @Column({ type: 'int', default: 0 })
   sortOrder: number;

@@ -8,6 +8,9 @@ export class News {
   @Column()
   title: string;
 
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  slug: string | null;
+
   @Column('text')
   content: string;
 

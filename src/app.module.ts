@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 
 // Entities
 import { Show } from './shows/show.entity';
+import { Commercial } from './commercials/commercial.entity';
 import { User } from './users/user.entity';
 import { Setting } from './settings/setting.entity';
 import { Backstage } from './backstage/backstage.entity';
@@ -21,6 +22,8 @@ import { SettingsModule } from './settings/settings.module';
 // Controllers and Services
 import { ShowsController } from './shows/shows.controller';
 import { ShowsService } from './shows/shows.service';
+import { CommercialsController } from './commercials/commercials.controller';
+import { CommercialsService } from './commercials/commercials.service';
 import { BackstageService } from './backstage/backstage.service';
 import { NewsController } from './news/news.controller';
 import { NewsService } from './news/news.service';
@@ -41,11 +44,11 @@ import { BackstageController } from './backstage/backstage.controller';
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'root'),
         database: configService.get<string>('DB_DATABASE', 'ali_fadhil'),
-        entities: [Show, User, Setting, Backstage, News],
-        synchronize: false, // Turned off for manual migrations
+        entities: [Show, Commercial, User, Setting, Backstage, News],
+        synchronize: true, // Turned off for manual migrations
       }),
     }),
-    TypeOrmModule.forFeature([Show, User, Setting, Backstage, News]),
+    TypeOrmModule.forFeature([Show, Commercial, User, Setting, Backstage, News]),
 
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
@@ -55,7 +58,13 @@ import { BackstageController } from './backstage/backstage.controller';
     UsersModule,
     SettingsModule,
   ],
-  controllers: [AppController, ShowsController, BackstageController, NewsController],
-  providers: [AppService, ShowsService, BackstageService, NewsService],
+  controllers: [
+    AppController,
+    ShowsController,
+    CommercialsController,
+    BackstageController,
+    NewsController,
+  ],
+  providers: [AppService, ShowsService, CommercialsService, BackstageService, NewsService],
 })
 export class AppModule { }

@@ -9,8 +9,8 @@ async function bootstrap() {
     origin: [
       'https://admin.alifadil.com',
       'https://alifadil.com',
-      // 'http://localhost:3002',
-      // 'http://localhost:3001',
+      'http://localhost:4001',
+      'http://localhost:4002',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,

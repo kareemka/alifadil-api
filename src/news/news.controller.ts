@@ -20,6 +20,11 @@ export class NewsController {
     return this.newsService.findAll();
   }
 
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.newsService.findBySlug(slug);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.newsService.findOne(+id);
